@@ -44,6 +44,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${lora.variable} ${manrope.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body style={{ fontFamily: 'var(--font-manrope), sans-serif' }}>
         {children}
         <Toaster />
