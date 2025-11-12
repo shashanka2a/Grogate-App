@@ -83,7 +83,7 @@ export function ProductDetail({ product, onBack, onAddToCart, onViewFarmer }: Pr
           onClick={() => onViewFarmer(product.farmer)}
           className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4 mb-6 text-left transition-all hover:shadow-md active:scale-[0.99]"
         >
-          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-offset-2" style={{ ringColor: '#E8F5E9' }}>
+          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-offset-2" style={{ '--tw-ring-color': '#E8F5E9' } as React.CSSProperties}>
             <ImageWithFallback
               src={product.farmer.photo}
               alt={product.farmer.name}

@@ -17,6 +17,7 @@ import { OrderTracking } from './app/OrderTracking';
 import { AccountScreen } from './app/AccountScreen';
 import { FarmerProfile } from './app/FarmerProfile';
 import { ArrowLeft } from 'lucide-react';
+import { CartItem as CartItemType } from '@/types';
 
 type Screen = 
   | 'splash'
@@ -56,42 +57,44 @@ interface MobileAppProps {
 export function MobileApp({ onBackToLanding }: MobileAppProps) {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItemType[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<DeliverySlot | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedFarmerId, setSelectedFarmerId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('User');
+  const [communityName, setCommunityName] = useState<string>('');
 
   // Add items to cart
-  const addToCart = (item: CartItem) => {
+  const addToCart = (product: any, quantity: number = 1) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+      const existingItem = prevCart.find(cartItem => cartItem.product.id === product.id);
       if (existingItem) {
         return prevCart.map(cartItem =>
-          cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+          cartItem.product.id === product.id
+            ? { ...cartItem, quantity: cartItem.quantity + quantity }
             : cartItem
         );
       }
-      return [...prevCart, item];
+      return [...prevCart, { product, quantity }];
     });
   };
 
   // Update cart item quantity
-  const updateCartQuantity = (id: string, quantity: number) => {
+  const updateCartQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      setCart(prevCart => prevCart.filter(item => item.id !== id));
+      setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
     } else {
       setCart(prevCart =>
         prevCart.map(item =>
-          item.id === id ? { ...item, quantity } : item
+          item.product.id === productId ? { ...item, quantity } : item
         )
       );
     }
   };
 
   // Remove item from cart
-  const removeFromCart = (id: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
+  const removeFromCart = (productId: string) => {
+    setCart(prevCart => prevCart.filter(item => item.product.id !== productId));
   };
 
   const renderScreen = () => {
@@ -108,32 +111,44 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
       case 'community':
         return (
           <CommunityVerification
-            onNext={() => setCurrentScreen('delivery')}
-            onBack={() => setCurrentScreen('welcome')}
+            userName={userName}
+            onComplete={(community, address) => {
+              setCommunityName(community);
+              setCurrentScreen('delivery');
+            }}
           />
         );
       case 'delivery':
         return (
           <DeliveryPreference
-            onNext={() => setCurrentScreen('complete')}
-            onBack={() => setCurrentScreen('community')}
+            communityName={communityName}
+            onComplete={(preference) => {
+              setCurrentScreen('complete');
+            }}
           />
         );
       case 'complete':
         return (
           <OnboardingComplete
+            userName={userName}
             onComplete={() => setCurrentScreen('auth')}
           />
         );
       case 'auth':
         return (
           <AuthScreen
-            onSuccess={() => setCurrentScreen('home')}
+            onSignUp={(email, password, name) => {
+              setUserName(name);
+              setCurrentScreen('home');
+            }}
           />
         );
       case 'home':
         return (
           <HomeScreen
+            user={{ id: '1', name: userName, email: '', community: communityName, address: '', deliveryPreference: 'doorstep' }}
+            products={[]}
+            cart={cart}
             onProductClick={(product) => {
               setSelectedProduct(product);
               setCurrentScreen('product');
@@ -141,11 +156,6 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
             onCartClick={() => setCurrentScreen('cart')}
             onAccountClick={() => setCurrentScreen('account')}
             onOrdersClick={() => setCurrentScreen('orders')}
-            onFarmerClick={(farmerId) => {
-              setSelectedFarmerId(farmerId);
-              setCurrentScreen('farmer');
-            }}
-            cartItemCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
           />
         );
       case 'product':
@@ -153,12 +163,12 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
           <ProductDetail
             product={selectedProduct}
             onBack={() => setCurrentScreen('home')}
-            onAddToCart={(item) => {
-              addToCart(item);
+            onAddToCart={(product, quantity) => {
+              addToCart(product, quantity);
               setCurrentScreen('home');
             }}
-            onFarmerClick={(farmerId) => {
-              setSelectedFarmerId(farmerId);
+            onViewFarmer={(farmer) => {
+              setSelectedFarmerId(farmer.id);
               setCurrentScreen('farmer');
             }}
           />
@@ -176,10 +186,11 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
       case 'checkout':
         return (
           <CheckoutScreen
+            user={{ id: '1', name: userName, email: '', community: communityName, address: '', deliveryPreference: 'doorstep' }}
             cart={cart}
             onBack={() => setCurrentScreen('cart')}
-            onConfirm={(slot) => {
-              setSelectedSlot(slot);
+            onPlaceOrder={(slot) => {
+              setSelectedSlot({ date: '', time: slot });
               setCurrentScreen('confirmation');
             }}
           />
@@ -187,21 +198,22 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
       case 'confirmation':
         return (
           <OrderConfirmation
-            cart={cart}
-            deliverySlot={selectedSlot}
-            onBackToHome={() => {
+            orderNumber={`ORD-${Date.now()}`}
+            onViewOrders={() => setCurrentScreen('orders')}
+            onContinueShopping={() => {
               setCart([]);
               setCurrentScreen('home');
             }}
-            onTrackOrder={() => setCurrentScreen('tracking')}
           />
         );
       case 'orders':
         return (
           <MyOrdersScreen
+            orders={[]}
             onBack={() => setCurrentScreen('home')}
-            onOrderClick={(orderId) => {
-              setSelectedOrderId(orderId);
+            onAccountClick={() => setCurrentScreen('account')}
+            onTrackOrder={(order) => {
+              setSelectedOrderId(order.id);
               setCurrentScreen('tracking');
             }}
           />
@@ -209,21 +221,44 @@ export function MobileApp({ onBackToLanding }: MobileAppProps) {
       case 'tracking':
         return (
           <OrderTracking
-            orderId={selectedOrderId || 'ORD-2024-001'}
+            order={{
+              id: selectedOrderId || 'ORD-2024-001',
+              items: [],
+              total: 0,
+              status: 'confirmed',
+              harvestDate: '',
+              deliveryDate: '',
+              deliveryWindow: '',
+              createdAt: new Date().toISOString()
+            }}
             onBack={() => setCurrentScreen('orders')}
           />
         );
       case 'account':
         return (
           <AccountScreen
+            user={{ id: '1', name: userName, email: '', community: communityName, address: '', deliveryPreference: 'doorstep' }}
             onBack={() => setCurrentScreen('home')}
+            onOrdersClick={() => setCurrentScreen('orders')}
           />
         );
       case 'farmer':
         return (
           <FarmerProfile
-            farmerId={selectedFarmerId || '1'}
+            farmer={{
+              id: selectedFarmerId || '1',
+              name: 'Farmer',
+              village: '',
+              photo: '',
+              bio: '',
+              story: ''
+            }}
+            products={[]}
             onBack={() => setCurrentScreen('home')}
+            onProductClick={(product) => {
+              setSelectedProduct(product);
+              setCurrentScreen('product');
+            }}
           />
         );
       default:

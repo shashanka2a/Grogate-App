@@ -34,7 +34,7 @@ export function PitchDeck({ onBackToLanding }: PitchDeckProps = {}) {
       type: 'cover',
       content: (
         <div className="flex flex-col items-center justify-center h-full text-center px-8">
-          <GrogateIcon size={80} style={{ color: 'var(--harvest-green)' }} strokeWidth={1.5} />
+          <GrogateIcon size={80} color="var(--harvest-green)" />
           <h1 
             style={{ 
               fontFamily: 'Lora, serif',
